@@ -4,7 +4,7 @@
 #include <windows.h>
 #include <thread>
 #include <mutex>
-#include "Main.cpp" // Замените на имя вашего файла с основным кодом
+#include "Main.cpp" 
 #ifndef TEST_MODE
 
 
@@ -21,7 +21,6 @@ TEST(MinMaxTest, BasicAssertions) {
     CloseHandle(hMin_Max);
 }
 
-// Тест для функции Average
 TEST(AverageTest, BasicAssertions) {
     Data b;
     b.numbs = { 3, 1, 4, 1, 5, 9 };
@@ -29,12 +28,12 @@ TEST(AverageTest, BasicAssertions) {
     HANDLE hAverage = CreateThread(nullptr, 0, Average, &b, 0, nullptr);
     WaitForSingleObject(hAverage, INFINITE);
 
-    EXPECT_DOUBLE_EQ(b.average, 3.833333); // Ожидаемое среднее значение
+    EXPECT_DOUBLE_EQ(b.average, 3.833333); 
 
     CloseHandle(hAverage);
 }
 
-//условная компиляция для предотвращения конфликта с main
+//ГіГ±Г«Г®ГўГ­Г Гї ГЄГ®Г¬ГЇГЁГ«ГїГ¶ГЁГї Г¤Г«Гї ГЇГ°ГҐГ¤Г®ГІГўГ°Г Г№ГҐГ­ГЁГї ГЄГ®Г­ГґГ«ГЁГЄГІГ  Г± main
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
