@@ -2,62 +2,74 @@
 #include <windows.h>
 #include <iostream>
 #include "Header.h"
-using namespace std;
+
+using std::cout;
+using std::cin;
 
 int main() {
-    setlocale(LC_ALL, "RUS");
+    // событие будет использоваться для уведомления сервера о том, что клиент запущен
+    HANDLE hStartEvent = OpenEventA(EVENT_MODIFY_STATE, FALSE, "Process Started");
+    if (hStartEvent == NULL) {
+        cout << "Ошибка события запуска\n";
+        return GetLastError();
+    }
+    //Устанавливаем состояние события, уведомляя сервер о том, что клиент запущен
+    SetEvent(hStartEvent);
 
-    //подключение к именованному каналу
-    HANDLE hPipe = CreateFileA("\\\\.\\pipe\\pipe_name", GENERIC_READ | GENERIC_WRITE,
-        0, NULL, OPEN_EXISTING, 0, NULL);
-
+    //Открываем именованный канал для обмена информацикй с сервером с разрешениями на чтение и запись
+    HANDLE hPipe = CreateFileA("\\\\.\\pipe\\pipe_name", GENERIC_WRITE | GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
     if (hPipe == INVALID_HANDLE_VALUE) {
-        cerr << "Ошибка создания именованного канала." << endl;
-        return GetLastError(); 
+        cout << "Ошибка создания именованного канала. Ошибка: " << GetLastError() << "\n";
+        return GetLastError();
     }
 
     while (true) {
-        int ID, action = 0;
-        cout << "Модификация - 1 " << endl << "Прочитать данные - 2 " << endl << "Выход - 3";
+        int action = 0;
+        cout << "Изменить данные - 1; \nЧитать данные - 2; \nВыход - 3 \n>>>";
         cin >> action;
 
         if (action == 3) {
             break;
         }
+        else {
+            DWORD dwWritten;
+            DWORD dwReaden;
+            int ID;
+            cout << "Введите ID сотрудника\n>>>";
+            cin >> ID;
 
-        cout << "Введите ID сотрудника:\n>>>";
-        cin >> ID; 
+            int new_mess = ID * 10 + action;
 
-        int mes = ID * 10 + action; // Формируем сообщение для отправки
+            bool a = WriteFile(hPipe, &new_mess, sizeof(new_mess), &dwWritten, NULL);
+            if (!a) {
+                cout << "Сообщение не было отправлено.\n";
+            }
 
-        DWORD dwWritten; // количествo записанных байтов
-        //oтправляем сообщение серверу
-        WriteFile(hPipe, &mes, sizeof(mes), &dwWritten, NULL);
+            employee* emp = new employee();
+            ReadFile(hPipe, emp, sizeof(employee), &dwReaden, NULL);
+            if (action == 1) {
+                cout << "ID сотрудника: " << emp->num << ".\nИмя сотрудника: " << emp->name << ".\nЧасы сотрудника: " << emp->hours << ".\n";
+                cout << "Введите новое имя:\n";
+                cin >> emp->name;
+                cout << "Введите новые часы:\n";
+                cin >> emp->hours;
+                a = WriteFile(hPipe, emp, sizeof(employee), &dwWritten, NULL);
+            }
+            else if (action == 2) {
+                cout << "ID сотрудника: " << emp->num << ".\nИмя сотрудника: " << emp->name << ".\nЧасы сотрудника: " << emp->hours << ".\n";
+            }
 
-        //модификация
-        if (action == 1) { 
-            employee emp; 
-            // чтение данные сотрудника с сервера
-            ReadFile(hPipe, &emp, sizeof(employee), &dwWritten, NULL);
+            if (a) {
+                cout << "Сообщение было отправлено.\n";
+            }
+            else {
+                cout << "Сообщение не было отправлено.\n";
+            }
 
-            // текущие данные 
-            cout << "ID: " << emp.num << ", Имя: " << emp.name << ", Часы: " << emp.hours << endl;
-            cout << "Введите новое имя:" << endl;
-            cin >> emp.name; 
-            cout << "Введите новые часы:" << endl;
-            cin >> emp.hours; 
-            // отправка обновленных данных обратно на сервер
-            WriteFile(hPipe, &emp, sizeof(employee), &dwWritten, NULL);
-        }
-        //чтение
-        else if (action == 2) { 
-            employee emp; 
-            // чтение данных сотрудника с сервера
-            ReadFile(hPipe, &emp, sizeof(employee), &dwWritten, NULL);
-            cout << "ID: " << emp.num << ", Имя: " << emp.name << ", Часы: " << emp.hours << endl;
+            new_mess = 1;
+            WriteFile(hPipe, &new_mess, sizeof(new_mess), &dwWritten, NULL);
         }
     }
 
-    CloseHandle(hPipe); 
-    return 0; 
+    return 0;
 }
